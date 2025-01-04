@@ -4,6 +4,8 @@ import cloud.sonam.kecha.friendship.model.User;
 import cloud.sonam.kecha.friendship.persist.entity.Friendship;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 import java.time.LocalDate;
@@ -13,6 +15,8 @@ import java.util.Set;
 import java.util.UUID;
 
 public class FriendshipTest {
+	private static final Logger LOG = LoggerFactory.getLogger(FriendshipTest.class);
+
 	@Test
 	public void constructor() {
 		LocalDateTime date = LocalDateTime.now();

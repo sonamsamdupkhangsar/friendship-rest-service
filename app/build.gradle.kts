@@ -9,7 +9,7 @@ plugins {
     // Apply the application plugin to add support for building a CLI application in Java.
     application
     id("org.springframework.boot") version "3.2.7" // Replace with your desired version
-    id("io.spring.dependency-management") version "1.1.3" // Dependency management plugin
+    id("io.spring.dependency-management") version "1.1.4" // Dependency management plugin
 }
 
 repositories {
@@ -23,8 +23,6 @@ dependencies {
    // testImplementation(junit.jupiter)
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-
-    implementation("org.springframework.boot:spring-boot-starter-log4j2")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
     implementation("org.springframework.boot:spring-boot-starter-security")
@@ -38,18 +36,18 @@ dependencies {
     testImplementation("io.r2dbc:r2dbc-h2:1.0.0.RELEASE")
     testImplementation("com.h2database:h2:2.1.214")
     testImplementation("junit:junit:4.13.2")
-    testImplementation("au.com.dius:pact-jvm-consumer-junit5:4.0.10")
-    testImplementation("au.com.dius:pact-jvm-provider-junit5:4.0.10")
+  //  testImplementation("au.com.dius:pact-jvm-consumer-junit5:4.0.10")
+   // testImplementation("au.com.dius:pact-jvm-provider-junit5:4.0.10")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.0.1")
     testImplementation("org.springframework.security:spring-security-test")
-    implementation("ch.qos.logback:logback-classic:1.5.12")
+    //implementation("ch.qos.logback:logback-classic:1.5.12")
 
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(20)
     }
 }
 
