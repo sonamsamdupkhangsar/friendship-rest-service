@@ -1,19 +1,15 @@
 package cloud.sonam.kecha.friendship.util;
 
-import cloud.sonam.kecha.friendship.model.KechaPage;
-import cloud.sonam.kecha.friendship.model.SeUserFriend;
-import cloud.sonam.kecha.friendship.model.User;
 import cloud.sonam.kecha.friendship.persist.entity.Friendship;
 import cloud.sonam.kecha.friendship.persist.repo.FriendshipRepository;
-import cloud.sonam.kecha.friendship.webclient.UserWebClient;
+import me.sonam.webclients.friendship.SeUserFriend;
+import me.sonam.webclients.user.User;
+import me.sonam.webclients.user.UserWebClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -71,7 +67,10 @@ public class UserFriendBuilder {
         return Mono.just(seUserFriend);
     }
 
+
     public static Mono<SeUserFriend> getUserFriend(User user, Friendship friendship) {
+
+        LOG.info("userId {}, friendId: {}", friendship.getUserId(), friendship.getFriendId());
 
         SeUserFriend seUserFriend = new SeUserFriend();
 
@@ -82,6 +81,7 @@ public class UserFriendBuilder {
 
         return Mono.just(seUserFriend);
     }
+
 
     public static void setFriendship(Friendship friendship, SeUserFriend seUserFriend) {
         seUserFriend.setFriendId(friendship.getFriendId());

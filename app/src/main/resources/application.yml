@@ -37,7 +37,7 @@ user-rest-service:
   root: ${USER_REST_SERVICE}
   context: ${user-rest-service.root}/users
 
-notifcation-rest-service:
+notification-rest-service:
   root: ${NOTIFICATION_REST_SERVICE}
   context: ${notification-rest-service.root}/notifications
 

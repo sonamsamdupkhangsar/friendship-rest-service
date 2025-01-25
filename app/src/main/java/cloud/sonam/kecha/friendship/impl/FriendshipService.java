@@ -1,18 +1,24 @@
 package cloud.sonam.kecha.friendship.impl;
 
 import cloud.sonam.kecha.friendship.FriendshipException;
-import cloud.sonam.kecha.friendship.model.SeUserFriend;
-import cloud.sonam.kecha.friendship.model.User;
+
+
 import cloud.sonam.kecha.friendship.persist.entity.Friendship;
 import cloud.sonam.kecha.friendship.persist.repo.FriendshipRepository;
 import cloud.sonam.kecha.friendship.util.UserFriendBuilder;
-import cloud.sonam.kecha.friendship.webclient.UserWebClient;
+import me.sonam.webclients.friendship.FriendNotification;
+import me.sonam.webclients.friendship.SeUserFriend;
+import me.sonam.webclients.notification.NotificationWebClient;
+import me.sonam.webclients.user.User;
+import me.sonam.webclients.user.UserWebClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -25,48 +31,58 @@ import java.util.UUID;
 public class FriendshipService {
     private static final Logger LOG = LoggerFactory.getLogger(FriendshipService.class);
 
-    @Autowired
-    private UserFriendBuilder userFriendBuilder;
-
     private final UserWebClient userWebClient;
     private final FriendshipRepository friendshipRepository;
+    private final NotificationWebClient notificationWebClient;
+    private final UserFriendBuilder userFriendBuilder;
 
-    public FriendshipService(UserWebClient userWebClient, FriendshipRepository friendshipRepository) {
+    public FriendshipService(UserWebClient userWebClient, FriendshipRepository friendshipRepository,
+                             NotificationWebClient notificationWebClient, UserFriendBuilder userFriendBuilder) {
         this.userWebClient = userWebClient;
         this.friendshipRepository = friendshipRepository;
+        this.notificationWebClient = notificationWebClient;
+        this.userFriendBuilder = userFriendBuilder;
     }
 
-    public Mono<Boolean> isFriends(UUID userId, UUID friendId) {
-        Pageable pageable = PageRequest.of(0, 1);
-        Mono<Page<Friendship>> pageMono = friendshipRepository.findByUserIdAndFriendIdAndRequestAcceptedIsTrueAndResponseSentDateNotNull(userId, friendId, pageable);
+    public Mono<Boolean> isFriends(UUID friendId) {
+        return getLoggedInUserId().flatMap(userId -> {
+            userWebClient.findById(friendId);
+//            return friendshipService.isFriends(userId, friendId);
 
-        return pageMono.flatMap(friendships -> {
-            if (!friendships.isEmpty()) {
+            Mono<Boolean> booleanMono = friendshipRepository.existsByUserIdAndFriendIdAndRequestAcceptedIsTrueAndResponseSentDateNotNull(userId, friendId);
+
+            return booleanMono.flatMap(isFriends -> {
+                if (isFriends) {
+                    return Mono.just(true);
+                }
+                else {
+                    return friendshipRepository.existsByUserIdAndFriendIdAndRequestAcceptedIsTrueAndResponseSentDateNotNull(friendId, userId);
+                }
+            });
+
+        });
+
+      /*  Mono<Boolean> booleanMono = friendshipRepository.existsByUserIdAndFriendIdAndRequestAcceptedIsTrueAndResponseSentDateNotNull(userId, friendId);
+
+        return booleanMono.flatMap(isFriends -> {
+            if (isFriends) {
                 return Mono.just(true);
             }
             else {
-                Mono<Page<Friendship>> pageMono1 = friendshipRepository.findByUserIdAndFriendIdAndRequestAcceptedIsTrueAndResponseSentDateNotNull(friendId, userId, pageable);
-                return pageMono1.flatMap(friendships1 -> {
-                    if (!friendships.isEmpty()) {
-                        return Mono.just(true);
-                    }
-                    else {
-                        return Mono.just(false);
-                    }
-                });
+                return friendshipRepository.existsByUserIdAndFriendIdAndRequestAcceptedIsTrueAndResponseSentDateNotNull(friendId, userId);
             }
-        });
+        });*/
     }
 
+
     public Flux<SeUserFriend> getFriendships(UUID userId) {
-        LOG.info("find friendships for userId: {}", userId);
+        LOG.info("find friendships for userId");
 
-        Flux<Friendship> friendshipFlux = friendshipRepository.findValidFriendshipForUser(userId);
-
-        return friendshipFlux.flatMap(friendship -> {
-            LOG.info("adding friendship {}", friendship);
-            return userFriendBuilder.buildUserFriendByFriendship(userId, friendship);
-        });
+        return friendshipRepository.findValidFriendshipForUser(userId)
+                .flatMap(friendship -> {
+                    LOG.info("adding friendship {}", friendship);
+                    return userFriendBuilder.buildUserFriendByFriendship(userId, friendship);
+                });
     }
 
     public Mono<Friendship> confirmFriendship(UUID userId, UUID friendshipId) {
@@ -92,14 +108,69 @@ public class FriendshipService {
                 });
     }
 
+    public Mono<UUID> getLoggedInUserId() {
+        return ReactiveSecurityContextHolder.getContext().flatMap(securityContext -> {
+            org.springframework.security.core.Authentication authentication = securityContext.getAuthentication();
+            Jwt jwt = (Jwt) authentication.getPrincipal();
+            String userIdString = jwt.getClaim("userId");
+            LOG.debug("claims: {}, jwt: {}, security context userId: {}", jwt.getClaims(), jwt,
+                    userIdString);
+
+            UUID userId = UUID.fromString(userIdString);
+
+            return Mono.just(userId);
+        });
+    }
+
+    public Mono<SeUserFriend> createFriendship(UUID friendId) {
+        return getLoggedInUserId().flatMap(userId -> requestFriendship(userId, friendId)
+                        .zipWith(Mono.just(userId))
+                ).flatMap(objects -> {
+                    LOG.info("get user by id {}, frienship: {}", objects.getT2(), objects.getT1());
+                    return           userWebClient.findById(objects.getT2()).zipWith(Mono.just(objects.getT1()));
+                })//userId, Friendship
+                .flatMap(objects -> UserFriendBuilder.getUserFriend(objects.getT1(), objects.getT2())
+                        .zipWith(Mono.just(objects.getT1())).zipWith(Mono.just(objects.getT2())))//SeUserFriend, User, Friendship objects
+                .doOnNext(objects -> LOG.info("send friend request notification, friendship {}, seUserFriend: {}, user: {}",
+                        objects.getT2(),
+                        objects.getT1().getT1(), objects.getT1().getT2()))
+                .flatMap(objects ->
+                        notificationWebClient.sendFriendNotification(objects.getT1().getT2(), objects.getT1().getT1(),
+                                FriendNotification.Event.REQUEST).thenReturn(objects)
+                )
+                .flatMap(objects -> {
+                    LOG.info("after notification, get friend by id: {}", objects.getT2().getFriendId());
+                    return  userWebClient.findById(objects.getT2().getFriendId()).zipWith(Mono.just(objects.getT2()));
+                })
+                .flatMap(objects -> {
+                    LOG.info("get seUserFriend on request for userId: {} friendship: {}", objects.getT1(), objects.getT2());
+                    return userFriendBuilder.createSeUserFriendOnRequest(objects.getT1(), objects.getT2());
+                });
+    }
+
+    public Mono<SeUserFriend> acceptFriendship(UUID friendshipId) {
+        LOG.info("get userFriend object from confirmFriendship");
+
+        return getLoggedInUserId().flatMap(userId -> confirmFriendship(userId, friendshipId).zipWith(Mono.just(userId))) //Friendship, loggedInUserId
+                .flatMap(friendshipLoggedInUserIdTuple -> {
+                    return userWebClient.findById(friendshipLoggedInUserIdTuple.getT2())
+                            .flatMap(loggedInUser -> UserFriendBuilder.getUserFriend(loggedInUser, friendshipLoggedInUserIdTuple.getT1()))
+                            .flatMap(seUserFriend -> userWebClient.findById(friendshipLoggedInUserIdTuple.getT1().getUserId()).zipWith(Mono.just(seUserFriend)))
+                            .flatMap(userSeUserFriendTuple2 ->
+                                    notificationWebClient.sendFriendNotification(userSeUserFriendTuple2.getT1(),
+                                                    userSeUserFriendTuple2.getT2(), FriendNotification.Event.CONFIRM)
+                                            .flatMap(user -> UserFriendBuilder.getUserFriend(userSeUserFriendTuple2.getT1(), friendshipLoggedInUserIdTuple.getT1())));
+                        });
+    }
+
     public Mono<Friendship> requestFriendship(UUID userId, UUID friendId) {
         LOG.info("requesting friendship from user {} to friendId {}", userId, friendId);
 
 
         return userWebClient.findById(userId)
                 .switchIfEmpty(Mono.error(new FriendshipException("failed to find user with id " + userId)))
-                .zipWith(userWebClient.findById(friendId).switchIfEmpty(
-                        Mono.error(new FriendshipException("failed to find friend with id " + friendId))))
+                .flatMap(user -> Mono.just(user).zipWith(userWebClient.findById(friendId).switchIfEmpty(
+                       Mono.error(new FriendshipException("failed to find friend with id "+ friendId)))))
                 .flatMap(objects -> {
                     User user = objects.getT1();
                     User friend = objects.getT2();
@@ -108,17 +179,12 @@ public class FriendshipService {
                             user, friend);
 
                     LOG.debug("delete previous friendship rows where friendship has been declined");
-                    List<Friendship> list = friendshipRepository
-                            .findByRequestAcceptedIsFalseAndUserIdAndFriendId(user.getId(), friend.getId());
-
-                    if (!list.isEmpty()) {
-                        LOG.debug("deleting '{}' previous friendship requests that were declined", list.size());
-                        for (Friendship fs : list) {
-                            return friendshipRepository.delete(fs).thenReturn(objects);
-                        }
-                    }
-                    return Mono.just(objects);
-                }).flatMap(objects -> {
+                    return friendshipRepository
+                            .deleteByRequestAcceptedIsFalseAndUserIdAndFriendId(user.getId(), friend.getId())
+                            .doOnNext(integer -> LOG.info("deleted {} friendship requests that were declined previously where userId {} and friendId {}",
+                                    integer, user.getId(), friend.getId()))
+                            .thenReturn(objects);
+            }).flatMap(objects -> {
                     User user = objects.getT1();
                     User friend = objects.getT2();
 
@@ -147,31 +213,16 @@ public class FriendshipService {
                             .filter(aBoolean -> !aBoolean)
                             .flatMap(aBoolean -> {
                                 if (!aBoolean) {
-                                    return saveFriendship(user, friend);
+                                    Friendship friendship = new Friendship(LocalDateTime.now(), null, user.getId(), friend.getId(), false);
+
+                                    LOG.debug("saving friendship entity saveFriendship(), {}", friendship.isNew());
+                                    return friendshipRepository.save(friendship);
                                 }
                                 else {
                                     return Mono.empty();
                                 }
                             });
                 });
-    }
-
-
-    private Mono<Friendship> saveFriendship(User user, User friend) {
-        Friendship friendship = new Friendship();
-
-        LOG.trace("set user in friendship");
-        friendship.setUserId(user.getId());
-
-        LOG.trace("user friend in friendship");
-        friendship.setFriendId(friend.getId());
-
-        LOG.trace("set current time as requestSentDate");
-        friendship.setRequestSentDate(LocalDateTime.now());
-        friendship.setRequestAccepted(false);
-
-        LOG.debug("saving friendship entity");
-        return friendshipRepository.save(friendship);
     }
 
     public Mono<Friendship> declineFriendship(UUID userId, UUID friendshipId) {
@@ -204,6 +255,10 @@ public class FriendshipService {
     public Mono<String> delete(UUID friendshipId) {
         LOG.debug("delete friendship by id {}", friendshipId);
 
-        return friendshipRepository.deleteById(friendshipId).thenReturn("friendship deleted by id");
+        return friendshipRepository.deleteById(friendshipId).flatMap(unused -> {
+            LOG.info("got deleted");
+            return Mono.just(unused);
+        }).thenReturn("friendship deleted by id");
+
     }
 }

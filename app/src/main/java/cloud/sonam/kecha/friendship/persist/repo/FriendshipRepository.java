@@ -18,11 +18,12 @@ import java.util.UUID;
 public interface FriendshipRepository extends ReactiveCrudRepository<Friendship, UUID> {
     Mono<Boolean>   existsByUserIdAndFriendId(UUID userID, UUID friendId);
     Flux<Friendship> findByUserIdAndFriendId(UUID userID, UUID friendId);
-    List<Friendship> findByRequestAcceptedIsFalseAndUserIdAndFriendId(UUID userId, UUID friendId);
+    //Flux<Friendship> findByRequestAcceptedIsFalseAndUserIdAndFriendId(UUID userId, UUID friendId);
+    Mono<Integer> deleteByRequestAcceptedIsFalseAndUserIdAndFriendId(UUID userId, UUID friendId);
 
     @Query("select fs from Friendship fs where (fs.userId=:userId or fs.friendId =:userId) and fs.requestAccepted=true and" +
             " fs.responseSentDate is not null order by fs.responseSentDate desc")
-    Mono<Page<Friendship>> findAcceptedFriendsForUser(@Param("userId")UUID userId, Pageable pageable);
+    Flux<Friendship> findAcceptedFriendsForUser(@Param("userId")UUID userId);
 
     /**
      * retrieve friendship rows for user where it's the user that requested or was requested by another user
@@ -34,7 +35,9 @@ public interface FriendshipRepository extends ReactiveCrudRepository<Friendship,
     @Query("select fs from Friendship fs where (fs.userId=:userId or fs.friendId =:userId) and fs.requestAccepted==true and responseSentDate!=null  " +
             "  order by fs.requestSentDate desc")
     Flux<Friendship> findValidFriendshipForUser(@Param("userId")UUID userId);
-    Mono<Page<Friendship>> findByUserIdAndFriendIdAndRequestAcceptedIsTrueAndResponseSentDateNotNull(UUID userId, UUID friendId, Pageable pageable);
+    //Mono<Page<Friendship>> findByUserIdAndFriendIdAndRequestAcceptedIsTrueAndResponseSentDateNotNull(UUID userId, UUID friendId, Pageable pageable);
+    //Flux<Friendship> findByUserIdAndFriendIdAndRequestAcceptedIsTrueAndResponseSentDateNotNull(UUID userId, UUID friendId);
+    Mono<Boolean> existsByUserIdAndFriendIdAndRequestAcceptedIsTrueAndResponseSentDateNotNull(UUID userId, UUID friendId);
 
     Mono<Void> deleteByUserId(UUID userId);
     Mono<Void> deleteByFriendId(UUID friendId);

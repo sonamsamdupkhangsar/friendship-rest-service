@@ -1,11 +1,13 @@
 package cloud.sonam.kecha.friendship.persist.entity;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-public class Friendship {
+public class Friendship implements Persistable<UUID> {
 
     @Id
     private UUID id;
@@ -20,6 +22,9 @@ public class Friendship {
 
     private UUID friendId;
 
+    @Transient
+    private boolean newFriendship;
+
     public Friendship() {
         super();
     }
@@ -27,13 +32,13 @@ public class Friendship {
 
     public Friendship(LocalDateTime requestSentDate, LocalDateTime responseSentDate,
                       UUID userId, UUID friendId, Boolean requestAccepted) {
-        super();
-        this.id = id;
+        this.id = UUID.randomUUID();
         this.requestSentDate = requestSentDate;
         this.responseSentDate = responseSentDate;
         this.userId = userId;
         this.friendId = friendId;
         this.requestAccepted = requestAccepted;
+        this.newFriendship = true;
     }
 
 
@@ -92,6 +97,9 @@ public class Friendship {
         this.requestAccepted = requestAccepted;
     }
 
+    public boolean isNew() {
+        return this.newFriendship;
+    }
 
     @Override
     public int hashCode() {

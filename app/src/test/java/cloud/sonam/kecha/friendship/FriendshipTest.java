@@ -1,7 +1,7 @@
 package cloud.sonam.kecha.friendship;
 
-import cloud.sonam.kecha.friendship.model.User;
 import cloud.sonam.kecha.friendship.persist.entity.Friendship;
+import me.sonam.webclients.user.User;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
