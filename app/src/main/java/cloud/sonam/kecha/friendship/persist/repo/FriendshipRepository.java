@@ -21,8 +21,8 @@ public interface FriendshipRepository extends ReactiveCrudRepository<Friendship,
     //Flux<Friendship> findByRequestAcceptedIsFalseAndUserIdAndFriendId(UUID userId, UUID friendId);
     Mono<Integer> deleteByRequestAcceptedIsFalseAndUserIdAndFriendId(UUID userId, UUID friendId);
 
-    @Query("select fs from Friendship fs where (fs.userId=:userId or fs.friendId =:userId) and fs.requestAccepted=true and" +
-            " fs.responseSentDate is not null order by fs.responseSentDate desc")
+    @Query("select * from Friendship where (user_id=:userId or friend_id =:userId) and request_accepted=true and" +
+            " response_sent_date is not null order by response_sent_date desc")
     Flux<Friendship> findAcceptedFriendsForUser(@Param("userId")UUID userId);
 
     /**

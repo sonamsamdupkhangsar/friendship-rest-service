@@ -75,6 +75,7 @@ public class FriendshipTest {
 
 		Friendship jackAndAna = new Friendship(date,date, jack.getId(), ana.getId(), false);
 		Friendship jackAndAna2 = new Friendship(date,date, jack.getId(), ana.getId(), false);
+		jackAndAna2.setId(jackAndAna.getId());
 		
 		Assert.assertTrue(jackAndAna.equals(jackAndAna2));
 		Assert.assertTrue(jackAndAna.toString().equals(jackAndAna2.toString()));
@@ -83,6 +84,7 @@ public class FriendshipTest {
 		Assert.assertFalse(jackAndAna.equals(jackAndAna2));		
 
 		jackAndAna2.setId(null);
+		jackAndAna.setId(null);
 		Assert.assertTrue(jackAndAna.equals(jackAndAna2));
 	}
 	@Test
@@ -104,6 +106,9 @@ public class FriendshipTest {
 
 		Friendship jackAndAnaCopy = new Friendship(date,date, jack.getId(), ana.getId(), false);
 		Friendship jackAndManuCopy = new Friendship(date,date, jack.getId(), manu.getId(), false);
+		jackAndManuCopy.setId(jackAndManu.getId());
+		jackAndAnaCopy.setId(jackAndAna.getId());
+
 		Assert.assertTrue(set.contains(jackAndManuCopy));
 		Assert.assertTrue(set.contains(jackAndAnaCopy));
 		jackAndAnaCopy.setId(UUID.randomUUID());

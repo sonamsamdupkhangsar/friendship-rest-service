@@ -1,6 +1,7 @@
 package cloud.sonam.kecha.friendship;
 
 import cloud.sonam.kecha.friendship.impl.FriendshipService;
+import me.sonam.webclients.friendship.SeUserFriend;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -124,14 +125,14 @@ public class FriendshipWebHandler implements FriendshipHandler {
      */
     @Override
     public Mono<ServerResponse> findFriends(ServerRequest serverRequest) {
-        int page = Integer.parseInt(serverRequest.pathVariable("page"));
-        int size = Integer.parseInt(serverRequest.pathVariable("size"));
+        //int page = Integer.parseInt(serverRequest.pathVariable("page"));
+        //int size = Integer.parseInt(serverRequest.pathVariable("size"));
 
-        LOG.info("findFriends from pageNumber {} and size {}", page, size);
+        LOG.info("findFriends from");
         return friendshipService.getLoggedInUserId()
                 .map(friendshipService::getFriendships)
                 .flatMap(s ->  ServerResponse.ok()
-                .contentType(MediaType.APPLICATION_NDJSON).bodyValue(Map.of("message", s)))
+                .contentType(MediaType.APPLICATION_NDJSON).body(s, SeUserFriend.class))
                 .onErrorResume(throwable -> {
                     LOG.debug("exception occurred in cancel Friendship", throwable);
                     LOG.error("cancelFriendship failed {}", throwable.getMessage());

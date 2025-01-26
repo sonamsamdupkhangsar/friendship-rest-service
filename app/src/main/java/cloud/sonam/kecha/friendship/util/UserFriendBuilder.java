@@ -32,10 +32,35 @@ public class UserFriendBuilder {
         seUserFriend.setFriendId(friendship.getFriendId());
         seUserFriend.setUserId(friendship.getUserId());
 
-        Mono<User> userMono = Mono.empty();
+        //Mono<User> userMono = Mono.empty();
+
+        return Mono.just(loggedInUserId).flatMap(uuid -> {
+            if (friendship.getUserId().equals(uuid)) {
+                LOG.info("friendship.userId equals loggedInUserId");
+                return userWebClient.findById(friendship.getFriendId());
+            }
+            else {
+                LOG.info("friendship.userId not equals loggedInUserId");
+                return userWebClient.findById(friendship.getUserId());
+            }
+        }).flatMap(user -> {
+            LOG.info("user is {}", user);
+            seUserFriend.setFullName(user.getFullName());
+            seUserFriend.setProfilePhoto(user.getProfileThumbailFileKey());
+            return Mono.just(seUserFriend);
+        }).doOnNext(seUserFriend1 -> {
+            if(friendship.getRequestAccepted() && friendship.getResponseSentDate() != null) {
+                seUserFriend.setFriend(true);
+                seUserFriend.setFriendshipId(friendship.getId());
+
+            }
+            else if(friendship.getRequestSentDate() != null) {
+                seUserFriend.setFriendshipId(friendship.getId());
+            }
+        }).thenReturn(seUserFriend);
 
         //store in userId of the other user, not the logged-in user
-        if(friendship.getUserId().equals(loggedInUserId)) {
+        /*if(friendship.getUserId().equals(loggedInUserId)) {
             userMono = userWebClient.findById(friendship.getFriendId());
         }
         else {
@@ -43,6 +68,7 @@ public class UserFriendBuilder {
         }
 
         return userMono.flatMap(user -> {
+            LOG.info("user is {}", user);
                 seUserFriend.setFullName(user.getFullName());
                 seUserFriend.setProfilePhoto(user.getProfileThumbailFileKey());
                 return Mono.just(seUserFriend);
@@ -55,7 +81,7 @@ public class UserFriendBuilder {
                 else if(friendship.getRequestSentDate() != null) {
                     seUserFriend.setFriendshipId(friendship.getId());
                 }
-        }).thenReturn(seUserFriend);
+        }).thenReturn(seUserFriend);*/
     }
 
     public Mono<SeUserFriend> createSeUserFriendOnRequest(User friend, Friendship friendship) {

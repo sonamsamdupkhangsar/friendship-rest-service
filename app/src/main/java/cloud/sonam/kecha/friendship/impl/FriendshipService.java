@@ -78,7 +78,7 @@ public class FriendshipService {
     public Flux<SeUserFriend> getFriendships(UUID userId) {
         LOG.info("find friendships for userId");
 
-        return friendshipRepository.findValidFriendshipForUser(userId)
+        return friendshipRepository.findAcceptedFriendsForUser(userId)
                 .flatMap(friendship -> {
                     LOG.info("adding friendship {}", friendship);
                     return userFriendBuilder.buildUserFriendByFriendship(userId, friendship);

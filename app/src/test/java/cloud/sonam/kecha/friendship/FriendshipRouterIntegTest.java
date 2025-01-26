@@ -21,7 +21,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -36,6 +38,7 @@ import reactor.test.StepVerifier;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -340,9 +343,6 @@ public class FriendshipRouterIntegTest {
         assertThat(request.getMethod()).isEqualTo("POST");
         assertThat(request.getPath()).startsWith("/notifications");
 
-
-
-
         Mono<Boolean> booleanMono1  =  friendshipRepository.existsById(friendshipId);
         booleanMono1.as(StepVerifier::create).assertNext(aBoolean -> {
             assertThat(aBoolean).isTrue();
@@ -364,6 +364,345 @@ public class FriendshipRouterIntegTest {
         return booleanMono;
     }
 
+    @Test
+    public void cancelFriendship() throws InterruptedException {
+        LOG.info("decline friendship test");
+
+        UUID userId = UUID.fromString("5d8de63a-0b45-4c33-b9eb-d7fb8d662107");
+        final String authenticationId = "dave";
+        Jwt jwt = jwt(authenticationId, userId);
+        when(this.jwtDecoder.decode(anyString())).thenReturn(Mono.just(jwt));
+
+        UUID friendId = UUID.randomUUID();
+        LOG.info("friendId: {}",friendId);
+
+        Friendship friendship = new Friendship(LocalDateTime.now(), LocalDateTime.now(), userId, friendId, false);
+        friendshipRepository.save(friendship).subscribe();
+
+        cancelFriendship(jwt, friendship.getId()).subscribe(aBoolean -> LOG.info("aBoolean is now {}", aBoolean));
+    }
+
+    private Mono<Boolean> cancelFriendship(Jwt jwt, UUID friendshipId) {
+        LOG.info("decline friendship with id: {}", friendshipId);
+
+        Mono<Boolean> booleanMono =  friendshipRepository.existsById(friendshipId);
+        booleanMono.as(StepVerifier::create).assertNext(aBoolean -> {
+            assertThat(aBoolean).isTrue();
+            LOG.info("assert that boolean is true");
+
+        }).verifyComplete();
+
+        LOG.info("verified there is a friendship with this id");
+
+
+        String endpoint = "/friendships/cancel/{friendshipId}".replace("{friendshipId}", friendshipId.toString());
+
+        EntityExchangeResult<String> entityExchangeResult = webTestClient.
+                mutateWith(mockJwt().jwt(jwt)).delete().uri(endpoint)
+                .headers(addJwt(jwt))
+                .exchange().expectStatus().isOk().expectBody(String.class)
+                .returnResult();
+
+        //the output must be consumed for the test case to work.
+        LOG.info("response: {}", entityExchangeResult.getResponseBody());
+        assertThat(entityExchangeResult.getResponseBody()).isEqualTo("{\"message\":\"friendship deleted by id\"}");
+
+        Mono<Boolean> booleanMono1  =  friendshipRepository.existsById(friendshipId);
+        booleanMono1.as(StepVerifier::create).assertNext(aBoolean -> {
+            assertThat(aBoolean).isFalse();
+            LOG.info("verified there is no friendship with id anymore");
+        }).verifyComplete();
+        return booleanMono;
+    }
+
+    @Test
+    public void findFriendship() throws InterruptedException {
+        LOG.info("find friendships");
+
+        friendshipRepository.deleteAll().subscribe();
+
+        UUID userId = UUID.fromString("5d8de63a-0b45-4c33-b9eb-d7fb8d662107");
+        final String authenticationId = "dave";
+        Jwt jwt = jwt(authenticationId, userId);
+        when(this.jwtDecoder.decode(anyString())).thenReturn(Mono.just(jwt));
+
+        UUID friendId = null;
+        final int count = 10;
+        //for (int i = 0; i < count; i++) {
+
+        friendId = UUID.randomUUID();
+        Friendship friendship = new Friendship(LocalDateTime.now(), LocalDateTime.now(), userId, friendId, true);
+        friendshipRepository.save(friendship).subscribe();
+
+        String friendFullName = "Shambha-"+friendId;
+        User friend = new User(friendId, friendFullName);
+        String jsonFriend = Mapper.getJson(friend);
+
+        LOG.info("add jsonFriend body to mock queue");
+
+        //1
+        mockWebServer.enqueue(new MockResponse().setHeader("Content-Type", "application/json").
+                    setResponseCode(201).setBody(jsonFriend));
+
+        friendId = UUID.randomUUID();
+        friendship = new Friendship(LocalDateTime.now(), LocalDateTime.now(), userId, friendId, true);
+        friendshipRepository.save(friendship).subscribe();
+
+        friendFullName = "Shambha-"+friendId;
+        friend = new User(friendId, friendFullName);
+        jsonFriend = Mapper.getJson(friend);
+
+        //2
+        mockWebServer.enqueue(new MockResponse().setHeader("Content-Type", "application/json").
+                setResponseCode(201).setBody(jsonFriend));
+
+        friendId = UUID.randomUUID();
+        friendship = new Friendship(LocalDateTime.now(), LocalDateTime.now(), userId, friendId, true);
+        friendshipRepository.save(friendship).subscribe();
+
+        friendFullName = "Shambha-"+friendId;
+        friend = new User(friendId, friendFullName);
+        jsonFriend = Mapper.getJson(friend);
+        //3
+        mockWebServer.enqueue(new MockResponse().setHeader("Content-Type", "application/json").
+                setResponseCode(201).setBody(jsonFriend));
+
+        friendId = UUID.randomUUID();
+        friendship = new Friendship(LocalDateTime.now(), LocalDateTime.now(), userId, friendId, true);
+        friendshipRepository.save(friendship).subscribe();
+
+        friendFullName = "Shambha-"+friendId;
+        friend = new User(friendId, friendFullName);
+        jsonFriend = Mapper.getJson(friend);
+        //4
+        mockWebServer.enqueue(new MockResponse().setHeader("Content-Type", "application/json").
+                setResponseCode(201).setBody(jsonFriend));
+
+        friendId = UUID.randomUUID();
+        friendship = new Friendship(LocalDateTime.now(), LocalDateTime.now(), userId, friendId, true);
+        friendshipRepository.save(friendship).subscribe();
+
+        friendFullName = "Shambha-"+friendId;
+        friend = new User(friendId, friendFullName);
+        jsonFriend = Mapper.getJson(friend);
+        //5
+        mockWebServer.enqueue(new MockResponse().setHeader("Content-Type", "application/json").
+                setResponseCode(201).setBody(jsonFriend));
+
+        friendId = UUID.randomUUID();
+        friendship = new Friendship(LocalDateTime.now(), LocalDateTime.now(), userId, friendId, true);
+        friendshipRepository.save(friendship).subscribe();
+
+        friendFullName = "Shambha-"+friendId;
+        friend = new User(friendId, friendFullName);
+        jsonFriend = Mapper.getJson(friend);
+        //6
+        mockWebServer.enqueue(new MockResponse().setHeader("Content-Type", "application/json").
+                setResponseCode(201).setBody(jsonFriend));
+
+        friendId = UUID.randomUUID();
+        friendship = new Friendship(LocalDateTime.now(), LocalDateTime.now(), userId, friendId, true);
+        friendshipRepository.save(friendship).subscribe();
+
+        friendFullName = "Shambha-"+friendId;
+        friend = new User(friendId, friendFullName);
+        jsonFriend = Mapper.getJson(friend);
+        //7
+        mockWebServer.enqueue(new MockResponse().setHeader("Content-Type", "application/json").
+                setResponseCode(201).setBody(jsonFriend));
+
+        friendId = UUID.randomUUID();
+        friendship = new Friendship(LocalDateTime.now(), LocalDateTime.now(), userId, friendId, true);
+        friendshipRepository.save(friendship).subscribe();
+
+        friendFullName = "Shambha-"+friendId;
+        friend = new User(friendId, friendFullName);
+        jsonFriend = Mapper.getJson(friend);
+        //8
+        mockWebServer.enqueue(new MockResponse().setHeader("Content-Type", "application/json").
+                setResponseCode(201).setBody(jsonFriend));
+
+        friendId = UUID.randomUUID();
+        friendship = new Friendship(LocalDateTime.now(), LocalDateTime.now(), userId, friendId, true);
+        friendshipRepository.save(friendship).subscribe();
+
+        friendFullName = "Shambha-"+friendId;
+        friend = new User(friendId, friendFullName);
+        jsonFriend = Mapper.getJson(friend);
+        //9
+        mockWebServer.enqueue(new MockResponse().setHeader("Content-Type", "application/json").
+                setResponseCode(201).setBody(jsonFriend));
+
+        friendId = UUID.randomUUID();
+        friendship = new Friendship(LocalDateTime.now(), LocalDateTime.now(), userId, friendId, true);
+        friendshipRepository.save(friendship).subscribe();
+
+        friendFullName = "Shambha-"+friendId;
+        friend = new User(friendId, friendFullName);
+        jsonFriend = Mapper.getJson(friend);
+        //10
+        mockWebServer.enqueue(new MockResponse().setHeader("Content-Type", "application/json").
+                setResponseCode(201).setBody(jsonFriend));
+        //}
+        findFriendship(jwt, userId, count);//.subscribe();//subscribe(seUserFriend -> LOG.info("seUserFriend is {}", seUserFriend));
+    }
+
+    private void findFriendship(Jwt jwt, UUID userId, final int count) throws InterruptedException {
+        LOG.info("find friendships for logged-in user");
+
+        Flux<Friendship> friendshipFlux =  friendshipRepository.findAcceptedFriendsForUser(userId);
+
+        StepVerifier.create(friendshipFlux).expectNextCount(count).verifyComplete();
+
+        LOG.info("verified there are 10 friendships for the userId");
+
+        String endpoint = "/friendships";
+
+        Flux<SeUserFriend> seUserFriendFlux = webTestClient.
+                mutateWith(mockJwt().jwt(jwt)).get().uri(endpoint)
+                .headers(addJwt(jwt))
+                .accept(MediaType.APPLICATION_NDJSON)
+                .exchange().expectStatus().isOk()
+                .returnResult(SeUserFriend.class).getResponseBody();
+
+        // 1 userWebClient.findById call is for friendId
+        RecordedRequest request = mockWebServer.takeRequest();
+        assertThat(request.getMethod()).isEqualTo("GET");
+        assertThat(request.getPath()).startsWith("/users/");
+
+        //2
+        request = mockWebServer.takeRequest();
+        assertThat(request.getMethod()).isEqualTo("GET");
+        assertThat(request.getPath()).startsWith("/users/");
+
+        //3
+        request = mockWebServer.takeRequest();
+        assertThat(request.getMethod()).isEqualTo("GET");
+        assertThat(request.getPath()).startsWith("/users/");
+
+        //4
+        request = mockWebServer.takeRequest();
+        assertThat(request.getMethod()).isEqualTo("GET");
+        assertThat(request.getPath()).startsWith("/users/");
+
+        //5
+        request = mockWebServer.takeRequest();
+        assertThat(request.getMethod()).isEqualTo("GET");
+        assertThat(request.getPath()).startsWith("/users/");
+
+        //6
+        request = mockWebServer.takeRequest();
+        assertThat(request.getMethod()).isEqualTo("GET");
+        assertThat(request.getPath()).startsWith("/users/");
+
+        //7
+        request = mockWebServer.takeRequest();
+        assertThat(request.getMethod()).isEqualTo("GET");
+        assertThat(request.getPath()).startsWith("/users/");
+
+        //8
+        request = mockWebServer.takeRequest();
+        assertThat(request.getMethod()).isEqualTo("GET");
+        assertThat(request.getPath()).startsWith("/users/");
+
+        //9
+        request = mockWebServer.takeRequest();
+        assertThat(request.getMethod()).isEqualTo("GET");
+        assertThat(request.getPath()).startsWith("/users/");
+
+        //10
+        request = mockWebServer.takeRequest();
+        assertThat(request.getMethod()).isEqualTo("GET");
+        assertThat(request.getPath()).startsWith("/users/");
+
+        // }
+
+
+        LOG.info("assert count to be 10");
+
+        StepVerifier.create(seUserFriendFlux).assertNext(seUserFriend -> {
+            LOG.info("assert the userId is the logged-in userId {}", seUserFriend.getUserId());
+            assertThat(seUserFriend.getUserId()).isEqualTo(userId);
+            assertThat(seUserFriend.getFriendId()).isNotNull();
+            assertThat(seUserFriend.getFriendId()).isNotEqualTo(userId);
+            assertThat(seUserFriend.getFriendshipId()).isNotNull();
+            assertThat(seUserFriend.isFriend()).isTrue();
+            assertThat(seUserFriend.getProfilePhoto()).isNull();
+        }).assertNext(seUserFriend -> {
+                    LOG.info("assert the userId is the logged-in userId {}", seUserFriend.getUserId());
+            assertThat(seUserFriend.getUserId()).isEqualTo(userId);
+            assertThat(seUserFriend.getFriendId()).isNotNull();
+            assertThat(seUserFriend.getFriendId()).isNotEqualTo(userId);
+            assertThat(seUserFriend.getFriendshipId()).isNotNull();
+            assertThat(seUserFriend.isFriend()).isTrue();
+            assertThat(seUserFriend.getProfilePhoto()).isNull();
+                }).assertNext(seUserFriend -> {
+                    LOG.info("assert the userId is the logged-in userId {}", seUserFriend.getUserId());
+            assertThat(seUserFriend.getUserId()).isEqualTo(userId);
+            assertThat(seUserFriend.getFriendId()).isNotNull();
+            assertThat(seUserFriend.getFriendId()).isNotEqualTo(userId);
+            assertThat(seUserFriend.getFriendshipId()).isNotNull();
+            assertThat(seUserFriend.isFriend()).isTrue();
+            assertThat(seUserFriend.getProfilePhoto()).isNull();
+                }).assertNext(seUserFriend -> {
+                    LOG.info("assert the userId is the logged-in userId {}", seUserFriend.getUserId());
+            assertThat(seUserFriend.getUserId()).isEqualTo(userId);
+            assertThat(seUserFriend.getFriendId()).isNotNull();
+            assertThat(seUserFriend.getFriendId()).isNotEqualTo(userId);
+            assertThat(seUserFriend.getFriendshipId()).isNotNull();
+            assertThat(seUserFriend.isFriend()).isTrue();
+            assertThat(seUserFriend.getProfilePhoto()).isNull();
+                }).assertNext(seUserFriend -> {
+                    LOG.info("assert the userId is the logged-in userId {}", seUserFriend.getUserId());
+            assertThat(seUserFriend.getUserId()).isEqualTo(userId);
+            assertThat(seUserFriend.getFriendId()).isNotNull();
+            assertThat(seUserFriend.getFriendId()).isNotEqualTo(userId);
+            assertThat(seUserFriend.getFriendshipId()).isNotNull();
+            assertThat(seUserFriend.isFriend()).isTrue();
+            assertThat(seUserFriend.getProfilePhoto()).isNull();
+                }).assertNext(seUserFriend -> {
+                    LOG.info("assert the userId is the logged-in userId {}", seUserFriend.getUserId());
+            assertThat(seUserFriend.getUserId()).isEqualTo(userId);
+            assertThat(seUserFriend.getFriendId()).isNotNull();
+            assertThat(seUserFriend.getFriendId()).isNotEqualTo(userId);
+            assertThat(seUserFriend.getFriendshipId()).isNotNull();
+            assertThat(seUserFriend.isFriend()).isTrue();
+            assertThat(seUserFriend.getProfilePhoto()).isNull();
+                }).assertNext(seUserFriend -> {
+                    LOG.info("assert the userId is the logged-in userId {}", seUserFriend.getUserId());
+            assertThat(seUserFriend.getUserId()).isEqualTo(userId);
+            assertThat(seUserFriend.getFriendId()).isNotNull();
+            assertThat(seUserFriend.getFriendId()).isNotEqualTo(userId);
+            assertThat(seUserFriend.getFriendshipId()).isNotNull();
+            assertThat(seUserFriend.isFriend()).isTrue();
+            assertThat(seUserFriend.getProfilePhoto()).isNull();
+                }).assertNext(seUserFriend -> {
+                    LOG.info("assert the userId is the logged-in userId {}", seUserFriend.getUserId());
+            assertThat(seUserFriend.getUserId()).isEqualTo(userId);
+            assertThat(seUserFriend.getFriendId()).isNotNull();
+            assertThat(seUserFriend.getFriendId()).isNotEqualTo(userId);
+            assertThat(seUserFriend.getFriendshipId()).isNotNull();
+            assertThat(seUserFriend.isFriend()).isTrue();
+            assertThat(seUserFriend.getProfilePhoto()).isNull();
+                }).assertNext(seUserFriend -> {
+                    LOG.info("assert the userId is the logged-in userId {}", seUserFriend.getUserId());
+           assertThat(seUserFriend.getUserId()).isEqualTo(userId);
+            assertThat(seUserFriend.getFriendId()).isNotNull();
+            assertThat(seUserFriend.getFriendId()).isNotEqualTo(userId);
+            assertThat(seUserFriend.getFriendshipId()).isNotNull();
+            assertThat(seUserFriend.isFriend()).isTrue();
+            assertThat(seUserFriend.getProfilePhoto()).isNull();
+                }).assertNext(seUserFriend -> {
+                    LOG.info("assert the userId is the logged-in userId {}", seUserFriend.getUserId());
+           assertThat(seUserFriend.getUserId()).isEqualTo(userId);
+            assertThat(seUserFriend.getFriendId()).isNotNull();
+            assertThat(seUserFriend.getFriendId()).isNotEqualTo(userId);
+            assertThat(seUserFriend.getFriendshipId()).isNotNull();
+            assertThat(seUserFriend.isFriend()).isTrue();
+            assertThat(seUserFriend.getProfilePhoto()).isNull();
+                })
+                .verifyComplete();
+    }
 
     private Jwt jwt(String subjectName, UUID userId) {
         return new Jwt("token", null, null,
