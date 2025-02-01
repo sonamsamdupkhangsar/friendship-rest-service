@@ -1,8 +1,7 @@
-package cloud.sonam.kecha.friendship;
+package me.sonam.friendship;
 
-import cloud.sonam.kecha.friendship.model.SeUser;
-import cloud.sonam.kecha.friendship.persist.entity.Friendship;
-import cloud.sonam.kecha.friendship.persist.repo.FriendshipRepository;
+import me.sonam.friendship.persist.entity.Friendship;
+import me.sonam.friendship.persist.repo.FriendshipRepository;
 import me.sonam.webclients.Mapper;
 import me.sonam.webclients.friendship.SeUserFriend;
 import me.sonam.webclients.user.User;
@@ -21,7 +20,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -38,7 +36,6 @@ import reactor.test.StepVerifier;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -54,7 +51,7 @@ import static org.springframework.security.test.web.reactive.server.SecurityMock
  */
 @EnableAutoConfiguration
 @ExtendWith(SpringExtension.class)
-@SpringBootTest(classes = {Application.class}, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(classes = {Application.class, TestConfig.class}, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ExtendWith(MockitoExtension.class)
 public class FriendshipRouterIntegTest {
     private static final Logger LOG = LoggerFactory.getLogger(FriendshipRouterIntegTest.class);
@@ -702,6 +699,71 @@ public class FriendshipRouterIntegTest {
             assertThat(seUserFriend.getProfilePhoto()).isNull();
                 })
                 .verifyComplete();
+    }
+
+    @Test
+    public void isFriends() throws InterruptedException {
+        LOG.info("isFriends endpoint test");
+
+        //for this set friendId to hardcoded value so that we can pass this friendId into jwt
+        //which will accept the friendship, user cannot accept only the friend in the friendship can
+        UUID userId = UUID.fromString("5d8de63a-0b45-4c33-b9eb-d7fb8d662107");
+        String authenticationId = "dave";
+        Jwt jwt = jwt(authenticationId, userId);
+        when(this.jwtDecoder.decode(anyString())).thenReturn(Mono.just(jwt));
+
+        UUID friendId = UUID.randomUUID();
+        LOG.info("friendId: {}",friendId);
+
+        Friendship friendship = new Friendship(LocalDateTime.now(), LocalDateTime.now(), userId, friendId, true);
+        friendshipRepository.save(friendship).subscribe();
+
+        LOG.info("verify user {} is friend with {}", userId, friendId);
+        isFriends(jwt, friendId, true);
+
+        LOG.info("delete all friendships before testing another one");
+        friendshipRepository.deleteAll().subscribe();
+
+        // swap userId and friendId
+        friendId = UUID.fromString("5d8de63a-0b45-4c33-b9eb-d7fb8d662107");
+        authenticationId = "dave";
+        jwt = jwt(authenticationId, friendId);
+        when(this.jwtDecoder.decode(anyString())).thenReturn(Mono.just(jwt));
+
+        userId = UUID.randomUUID();
+        LOG.info("friendId: {}",friendId);
+
+        friendship = new Friendship(LocalDateTime.now(), LocalDateTime.now(), friendId, userId, true);
+        friendshipRepository.save(friendship).subscribe();
+
+        LOG.info("verify user {} is friend with {}", userId, friendId);
+        isFriends(jwt, userId, true);
+
+        LOG.info("delete all friendships before testing another one");
+        friendshipRepository.deleteAll().subscribe();
+
+        friendship = new Friendship(LocalDateTime.now(), LocalDateTime.now(), friendId, userId, false);
+        friendshipRepository.save(friendship).subscribe();
+
+        LOG.info("verify user {} is friend with {}", userId, friendId);
+        isFriends(jwt, userId, false);
+    }
+
+    private void isFriends(Jwt jwt, UUID userId, boolean isFriends) {
+        LOG.info("check user is friends userId: {}", userId);
+
+        String endpoint = "/friendships/{userId}".replace("{userId}", userId.toString());
+
+        EntityExchangeResult<String> entityExchangeResult = webTestClient.
+                mutateWith(mockJwt().jwt(jwt)).get().uri(endpoint)
+                .headers(addJwt(jwt))
+                .accept(MediaType.APPLICATION_NDJSON)
+                .exchange().expectStatus().isOk().expectBody(String.class)
+                .returnResult();
+
+        LOG.info("response is {}", entityExchangeResult.getResponseBody());
+
+        assertThat(entityExchangeResult.getResponseBody()).isEqualTo("{\"message\":"+isFriends+"}");
     }
 
     private Jwt jwt(String subjectName, UUID userId) {

@@ -1,6 +1,6 @@
-package cloud.sonam.kecha.friendship;
+package me.sonam.friendship.web;
 
-import cloud.sonam.kecha.friendship.impl.FriendshipService;
+import me.sonam.friendship.FriendshipService;
 import me.sonam.webclients.friendship.SeUserFriend;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

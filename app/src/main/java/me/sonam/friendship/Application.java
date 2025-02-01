@@ -1,4 +1,4 @@
-package cloud.sonam.kecha.friendship;
+package me.sonam.friendship;
 
 import io.r2dbc.spi.ConnectionFactory;
 import org.slf4j.Logger;
@@ -12,7 +12,7 @@ import org.springframework.r2dbc.connection.init.ConnectionFactoryInitializer;
 import org.springframework.r2dbc.connection.init.ResourceDatabasePopulator;
 
 @EnableDiscoveryClient
-@SpringBootApplication(scanBasePackages = {"me.sonam", "cloud.sonam"})
+@SpringBootApplication(scanBasePackages = {"me.sonam"})
 public class Application {
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
 

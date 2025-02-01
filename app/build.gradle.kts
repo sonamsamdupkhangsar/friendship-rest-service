@@ -24,13 +24,18 @@ repositories {
     // Use Maven Central for resolving dependencies.
     mavenCentral()
     mavenLocal()
+    maven {
+        url = uri("https://maven.pkg.github.com/sonamsamdupkhangsar/friendship-api")
+        credentials {
+            username = System.getenv("USERNAME")
+            password = System.getenv("PERSONAL_ACCESS_TOKEN")
+        }
+    }
 }
 
 
 dependencies {
-    // Use JUnit Jupiter for testing.
-   // testImplementation(junit.jupiter)
-
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
@@ -48,7 +53,8 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.0.1")
     testImplementation("org.springframework.security:spring-security-test")
-    implementation("me.sonam:webclients:1.0.0-SNAPSHOT")
+    implementation("me.sonam:friendship-api:1.0.0-SNAPSHOT")
+    implementation("me.sonam:token-filter:1.0.5-SNAPSHOT")
 
 }
 
@@ -61,7 +67,7 @@ java {
 
 application {
     // Define the main class for the application.
-    mainClass = "cloud.sonam.friendships.Application"
+    mainClass = "me.sonam.friendship.Application"
 }
 
 tasks.named<Test>("test") {

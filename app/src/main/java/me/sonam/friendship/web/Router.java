@@ -1,11 +1,10 @@
-package cloud.sonam.kecha.friendship;
+package me.sonam.friendship.web;
 
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerResponse;
@@ -24,7 +23,8 @@ public class Router {
                 .andRoute(DELETE("/friendships/decline/{friendshipId}"), handler::declineFriendship)
                 .andRoute(POST("/friendships/accept/{friendshipId}"), handler::acceptFriendship)
                 .andRoute(DELETE("/friendships/cancel/{friendshipId}"), handler::cancelFriendship)
-                .andRoute(GET("/friendships"), handler::findFriends);
+                .andRoute(GET("/friendships"), handler::findFriends)
+                .andRoute(GET("/friendships/{userId}"), handler::isFriends);
 
     }
 }

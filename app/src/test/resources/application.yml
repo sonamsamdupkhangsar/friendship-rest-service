@@ -71,9 +71,7 @@ eureka:
       defaultZone: https://${EUREKA_USER}:${EUREKA_PASSWORD}@discovery-service.sonam.cloud/eureka
 
 permitpath:
-  - path: /users
-    httpMethods: POST
-  - path: /users/api/health/*
+  - path: /friendships/api/health/*
     httpMethods: GET
 
 requestFilters:
