@@ -27,7 +27,25 @@ Build docker image using included Dockerfile.
 -e apiKey=123 -e DB_SSLMODE=DISABLE
 --publish 8080:8080 ghcr.io/<username>/friendshps-rest-service:latest`
 
+Build docker image with secrets in USERNAME and PERSONAL_ACCESS_TOKEN files:
 
+
+```
+docker build --secret id=USERNAME,src=USERNAME --secret id=PERSONAL_ACCESS_TOKEN,src=PERSONAL_ACCESS_TOKEN -t fs .
+```
+
+Run the Docker image:
+```
+docker run -e SPRING_PROFILES_ACTIVE=local -e POSTGRES_USERNAME=test -e POSTGRES_PASSWORD=test -e POSTGRES_DBNAME=friendship -e POSTGRES_SERVICE=host.docker.internal:5432 -e DB_SSLMODE=DISABLE -e ISSUER_URI=http://10.0.0.28:9001 -e EUREKA_HOST=host.docker.internal -it fs -d
+
+```
+
+
+
+Run with profile:
+```
+docker run -e SPRING_PROFILES_ACTIVE=localdocker -it fs -d
+```
 ## Installation on Kubernetes
 Use my Helm chart here @ [sonam-helm-chart](https://github.com/sonamsamdupkhangsar/sonam-helm-chart):
 
