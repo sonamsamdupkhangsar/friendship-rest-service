@@ -15,6 +15,10 @@ ext {
     set("springCloudVersion", "2024.0.0")
 }
 
+group = "me.sonam"
+version = "1.0-SNAPSHOT"
+description = "friendship-rest-service"
+
 dependencyManagement {
     imports {
         mavenBom ("org.springframework.cloud:spring-cloud-dependencies:2024.0.0")
@@ -26,6 +30,13 @@ repositories {
     mavenLocal()
     maven {
         url = uri("https://maven.pkg.github.com/sonamsamdupkhangsar/friendship-api")
+        credentials {
+            username = System.getenv("USERNAME")
+            password = System.getenv("PERSONAL_ACCESS_TOKEN")
+        }
+    }
+    maven {
+        url = uri("https://maven.pkg.github.com/sonamsamdupkhangsar/token-filter")
         credentials {
             username = System.getenv("USERNAME")
             password = System.getenv("PERSONAL_ACCESS_TOKEN")
