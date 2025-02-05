@@ -16,8 +16,13 @@ ext {
 }
 
 group = "me.sonam"
-version = "1.0-SNAPSHOT"
-description = "friendship-rest-service"
+version = "1.0.0-SNAPSHOT"
+
+tasks {
+    jar {
+        archiveBaseName.set("friendship-rest-service") // Set the desired JAR name
+    }
+}
 
 dependencyManagement {
     imports {
