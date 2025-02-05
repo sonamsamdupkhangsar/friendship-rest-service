@@ -8,7 +8,7 @@ RUN --mount=type=secret,id=USERNAME --mount=type=secret,id=PERSONAL_ACCESS_TOKEN
     export USERNAME=$(cat /run/secrets/USERNAME)\
     export PERSONAL_ACCESS_TOKEN=$(cat /run/secrets/PERSONAL_ACCESS_TOKEN) &&\
      ./gradlew clean build --status
-RUN  mkdir -p build/dependency && (cd build/dependency; ls -altr; jar -xf ../../app/build/libs/friendship-rest-service-1.0.0-SNAPSHOT.jar)
+RUN  mkdir -p build/dependency && (cd build/dependency; ls -altr; jar -xf ../../app/build/libs/app-1.0.0-SNAPSHOT.jar)
 
 FROM eclipse-temurin:21-jdk-alpine
 VOLUME /tmp
