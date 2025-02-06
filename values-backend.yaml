@@ -76,7 +76,7 @@ postgres:
   port: "5432"
   service: friendship-minimal-cluster
   secretfile: sonam.friendship-minimal-cluster.credentials.postgresql.acid.zalan.do
-  dbname: user
+  dbname: friendship
 
 envs:
 #  - name: OAUTH_AUDIENCES
