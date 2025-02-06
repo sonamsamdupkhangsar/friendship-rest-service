@@ -22,9 +22,6 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      #- name: Publish Pacts
-      #  run: USERNAME=${{github.actor}} PERSONAL_ACCESS_TOKEN=${{secrets.PERSONAL_ACCESS_TOKEN}} pactbrokerurl=${{ secrets.PACTBROKER_URL }} pactbrokerusername=${{ secrets.PACTBROKER_USERNAME }}  pactbrokerpassword=${{ secrets.PACTBROKER_PASSWORD }} ./gradlew clean build pactPublish
-
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
