@@ -16,6 +16,6 @@ spec:
     - createdb
     sonam_user: []  # role for application foo
   databases:
-    account: sonam  # dbname: owner
+    friendship: sonam  # dbname: owner
   postgresql:
     version: "15"
